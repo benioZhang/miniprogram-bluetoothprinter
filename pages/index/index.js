@@ -1,54 +1,275 @@
-//index.js
-//获取应用实例
-const app = getApp()
+const LAST_CONNECTED_DEVICE = 'last_connected_device'
+
+function inArray(arr, key, val) {
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i][key] === val) {
+      return i
+    }
+  }
+  return -1
+}
+
+// ArrayBuffer转16进度字符串示例
+function ab2hex(buffer) {
+  const hexArr = Array.prototype.map.call(
+    new Uint8Array(buffer),
+    function(bit) {
+      return ('00' + bit.toString(16)).slice(-2)
+    }
+  )
+  return hexArr.join(',')
+}
+
+function str2ab(str) {
+  // Convert str to ArrayBuff and write to printer
+  let buffer = new ArrayBuffer(str.length)
+  let dataView = new DataView(buffer)
+  for (let i = 0; i < str.length; i++) {
+    dataView.setUint8(i, str.charAt(i).charCodeAt(0))
+  }
+  return buffer;
+}
 
 Page({
   data: {
-    motto: 'Hello World',
-    userInfo: {},
-    hasUserInfo: false,
-    canIUse: wx.canIUse('button.open-type.getUserInfo')
+    devices: [],
+    connected: false,
+    chs: []
   },
-  //事件处理函数
-  bindViewTap: function() {
-    wx.navigateTo({
-      url: '../logs/logs'
-    })
+  onUnload() {
+    this.closeBluetoothAdapter()
   },
-  onLoad: function () {
-    if (app.globalData.userInfo) {
-      this.setData({
-        userInfo: app.globalData.userInfo,
-        hasUserInfo: true
+  openBluetoothAdapter() {
+    if (!wx.openBluetoothAdapter) {
+      // 如果希望用户在最新版本的客户端上体验您的小程序，可以这样子提示
+      wx.showModal({
+        title: '提示',
+        content: '当前微信版本过低，无法使用该功能，请升级到最新微信版本后重试。'
       })
-    } else if (this.data.canIUse){
-      // 由于 getUserInfo 是网络请求，可能会在 Page.onLoad 之后才返回
-      // 所以此处加入 callback 以防止这种情况
-      app.userInfoReadyCallback = res => {
-        this.setData({
-          userInfo: res.userInfo,
-          hasUserInfo: true
-        })
-      }
-    } else {
-      // 在没有 open-type=getUserInfo 版本的兼容处理
-      wx.getUserInfo({
-        success: res => {
-          app.globalData.userInfo = res.userInfo
-          this.setData({
-            userInfo: res.userInfo,
-            hasUserInfo: true
+      return
+    }
+    wx.openBluetoothAdapter({
+      success: (res) => {
+        console.log('openBluetoothAdapter success', res)
+        this.startBluetoothDevicesDiscovery()
+      },
+      fail: (res) => {
+        if (res.errCode === 10001) {
+          wx.showModal({
+            title: '错误',
+            content: '未找到蓝牙设备, 请打开蓝牙后重试。',
+            showCancel: false
+          })
+          wx.onBluetoothAdapterStateChange(function(res) {
+            console.log('onBluetoothAdapterStateChange', res)
+            if (res.available) {
+              this.startBluetoothDevicesDiscovery()
+            }
           })
         }
-      })
-    }
+      }
+    })
   },
-  getUserInfo: function(e) {
-    console.log(e)
-    app.globalData.userInfo = e.detail.userInfo
+  getBluetoothAdapterState() {
+    wx.getBluetoothAdapterState({
+      success: (res) => {
+        console.log('getBluetoothAdapterState', res)
+        if (res.discovering) {
+          this.onBluetoothDeviceFound()
+        } else if (res.available) {
+          this.startBluetoothDevicesDiscovery()
+        }
+      }
+    })
+  },
+  startBluetoothDevicesDiscovery() {
+    if (this._discoveryStarted) {
+      return
+    }
+    this._discoveryStarted = true
+    wx.startBluetoothDevicesDiscovery({
+      success: (res) => {
+        console.log('startBluetoothDevicesDiscovery success', res)
+        this.onBluetoothDeviceFound()
+      },
+      fail: (res) => {
+        console.log('startBluetoothDevicesDiscovery fail', res)
+      }
+    })
+  },
+  stopBluetoothDevicesDiscovery() {
+    wx.stopBluetoothDevicesDiscovery({
+      complete: () => {
+        this._discoveryStarted = false
+      }
+    })
+  },
+  onBluetoothDeviceFound() {
+    wx.onBluetoothDeviceFound((res) => {
+      res.devices.forEach(device => {
+        if (!device.name && !device.localName) {
+          return
+        }
+        const foundDevices = this.data.devices
+        const idx = inArray(foundDevices, 'deviceId', device.deviceId)
+        const data = {}
+        if (idx === -1) {
+          data[`devices[${foundDevices.length}]`] = device
+        } else {
+          data[`devices[${idx}]`] = device
+        }
+        this.setData(data)
+      })
+    })
+  },
+  createBLEConnection(e) {
+    const ds = e.currentTarget.dataset
+    const deviceId = ds.deviceId
+    const name = ds.name
+    this._createBLEConnection(deviceId, name)
+  },
+  _createBLEConnection(deviceId, name) {
+    wx.showLoading()
+    wx.createBLEConnection({
+      deviceId,
+      success: () => {
+        this.setData({
+          connected: true,
+          name,
+          deviceId,
+        })
+        this.getBLEDeviceServices(deviceId)
+        wx.setStorage({
+          key: LAST_CONNECTED_DEVICE,
+          data: name + ':' + deviceId
+        })
+      },
+      complete() {
+        wx.hideLoading()
+      },
+      fail: (res) => {
+        console.log('createBLEConnection fail', res)
+      }
+    })
+    this.stopBluetoothDevicesDiscovery()
+  },
+  closeBLEConnection() {
+    wx.closeBLEConnection({
+      deviceId: this.data.deviceId
+    })
     this.setData({
-      userInfo: e.detail.userInfo,
-      hasUserInfo: true
+      connected: false,
+      chs: [],
+      canWrite: false,
+    })
+  },
+  getBLEDeviceServices(deviceId) {
+    wx.getBLEDeviceServices({
+      deviceId,
+      success: (res) => {
+        for (let i = 0; i < res.services.length; i++) {
+          if (res.services[i].isPrimary) {
+            this.getBLEDeviceCharacteristics(deviceId, res.services[i].uuid)
+            return
+          }
+        }
+      }
+    })
+  },
+  getBLEDeviceCharacteristics(deviceId, serviceId) {
+    wx.getBLEDeviceCharacteristics({
+      deviceId,
+      serviceId,
+      success: (res) => {
+        console.log('getBLEDeviceCharacteristics success', res.characteristics)
+        for (let i = 0; i < res.characteristics.length; i++) {
+          const item = res.characteristics[i]
+          if (item.properties.write) {
+            this.setData({
+              canWrite: true
+            })
+            this._deviceId = deviceId
+            this._serviceId = serviceId
+            this._characteristicId = item.uuid
+            break;
+          }
+        }
+      },
+      fail(res) {
+        console.error('getBLEDeviceCharacteristics', res)
+      }
+    })
+  },
+  writeBLECharacteristicValue() {
+    if (!this._input) {
+      return
+    }
+    console.log('params', this._deviceId, this._serviceId, this._characteristicId);
+
+    var str = '';
+    str = str.concat('\x1b\x40')
+      .concat(this._input)
+      .concat('\x0a');
+    let buffer = str2ab(str);
+    console.log('ArrayBuffer', ab2hex(buffer));
+
+    wx.writeBLECharacteristicValue({
+      deviceId: this._deviceId,
+      serviceId: this._serviceId,
+      characteristicId: this._characteristicId,
+      value: buffer,
+      success(res) {
+        console.log('writeBLECharacteristicValue success', res)
+      },
+      fail(res) {
+        console.log('writeBLECharacteristicValue fail', res)
+      }
+    })
+  },
+  closeBluetoothAdapter() {
+    wx.closeBluetoothAdapter()
+    this._discoveryStarted = false
+  },
+  bindblur(e) {
+    let value = e.detail.value;
+    console.log('printText', value)
+    this._input = value;
+  },
+  onLoad: function(options) {
+    const lastDevice = wx.getStorageSync(LAST_CONNECTED_DEVICE);
+    this.setData({
+      lastDevice: lastDevice
+    })
+  },
+  createBLEConnectionWithDeviceId(e) {
+    const device = this.data.lastDevice
+    if (!device) {
+      return
+    }
+    const index = device.indexOf(':');
+    const name = device.substring(0, index);
+    const deviceId = device.substring(index + 1, device.length);
+    console.log('createBLEConnectionWithDeviceId', name + ':' + deviceId)
+    wx.openBluetoothAdapter({
+      success: (res) => {
+        console.log('openBluetoothAdapter success', res)
+        this._createBLEConnection(deviceId, name)
+      },
+      fail: (res) => {
+        if (res.errCode === 10001) {
+          wx.showModal({
+            title: '错误',
+            content: '未找到蓝牙设备, 请打开蓝牙后重试。',
+            showCancel: false
+          })
+          wx.onBluetoothAdapterStateChange(function(res) {
+            console.log('onBluetoothAdapterStateChange', res)
+            if (res.available) {
+              this._createBLEConnection(deviceId, name)
+            }
+          })
+        }
+      }
     })
   }
 })

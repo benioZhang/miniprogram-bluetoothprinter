@@ -1,21 +1,55 @@
-/**index.wxss**/
-.userinfo {
+.page-section {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  border-bottom: 2rpx solid #EEE;
+  padding: 30rpx 0;
 }
 
-.userinfo-avatar {
-  width: 128rpx;
-  height: 128rpx;
-  margin: 20rpx;
-  border-radius: 50%;
+.devices-summary {
+  padding: 10rpx;
+  font-size: 30rpx;
 }
 
-.userinfo-nickname {
-  color: #aaa;
+.device-list {
+  height: 300rpx;
 }
 
-.usermotto {
-  margin-top: 200px;
+.device-item {
+  border-bottom: 1rpx solid #EEE;
+  padding: 10rpx;
+  color: #666;
+}
+
+.device-item-hover {
+  background-color: rgba(0, 0, 0, .1);
+}
+
+.btn-area {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 30rpx;
+  margin: 30rpx 0;
+}
+
+.connected-area {
+  font-size: 22rpx;
+}
+
+.connected-info {}
+
+.input-area {
+  background: #fff;
+  margin-top: 10rpx;
+  width: 100%;
+}
+
+.input {
+  font-size: 28rpx;
+  height: 2.58823529em;
+  min-height: 2.58823529em;
+  line-height: 2.58823529em;
+  padding: 10rpx;
 }

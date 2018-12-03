@@ -1,13 +1,51 @@
-<!--index.wxml-->
+<wxs module="utils">
+  module.exports.max = function(n1, n2) {
+  return Math.max(n1, n2)
+  }
+  module.exports.len = function(arr) {
+  arr = arr || [];
+  return arr.length;
+  }
+</wxs>
 <view class="container">
-  <view class="userinfo">
-    <button wx:if="{{!hasUserInfo && canIUse}}" open-type="getUserInfo" bindgetuserinfo="getUserInfo"> 获取头像昵称 </button>
-    <block wx:else>
-      <image bindtap="bindViewTap" class="userinfo-avatar" src="{{userInfo.avatarUrl}}" mode="cover"></image>
-      <text class="userinfo-nickname">{{userInfo.nickName}}</text>
-    </block>
+  <view class="page-section">
+    <view class="devices-summary">已发现 {{devices.length}} 个外围设备：</view>
+    <scroll-view class="device-list" scroll-y scroll-with-animation>
+      <view wx:for="{{devices}}" wx:key="index" data-device-id="{{item.deviceId}}" data-name="{{item.name || item.localName}}" bindtap="createBLEConnection" class="device-item" hover-class="device-item-hover">
+        <view style="font-size: 16px; color: #333;">{{item.name}}</view>
+        <view style="font-size: 10px">信号强度: {{item.RSSI}}dBm ({{utils.max(0, item.RSSI + 100)}}%)</view>
+        <view style="font-size: 10px">UUID: {{item.deviceId}}</view>
+        <view style="font-size: 10px">Service数量: {{utils.len(item.advertisServiceUUIDs)}}</view>
+      </view>
+    </scroll-view>
+    <view class="btn-area">
+      <button type="primary" bindtap="openBluetoothAdapter">开始扫描</button>
+      <button bindtap="stopBluetoothDevicesDiscovery" style="margin-top: 10px;">停止扫描</button>
+    </view>
   </view>
-  <view class="usermotto">
-    <text class="user-motto">{{motto}}</text>
+  <view class="page-section connected-area" wx:if="{{lastDevice}}">
+    <text style="font-size: 30rpx">最近连接的设备</text>
+    <view>{{lastDevice}}</view>
+    <view class="btn-area">
+      <button type="primary" bindtap="createBLEConnectionWithDeviceId">直接连接</button>
+    </view>
+  </view>
+  <view class="page-section connected-area" wx:if="{{connected}}">
+    <view class="connected-info">
+      <text style="font-size: 30rpx">已连接到 {{name}}</text>
+      <view wx:for="{{chs}}" wx:key="index">
+        <view>特性UUID: {{item.uuid}}</view>
+        <view>特性值: {{item.value}}</view>
+      </view>
+    </view>
+    <view class="input-area" wx:if="{{canWrite}}">
+      <input class="input" bindblur="bindblur" placeholder="输入打印内容"></input>
+    </view>
+    <view class="btn-area">
+      <button wx:if="{{canWrite}}" type="primary" bindtap="writeBLECharacteristicValue" style="margin-bottom: 10px;">
+        写数据
+      </button>
+      <button bindtap="closeBLEConnection">断开连接</button>
+    </view>
   </view>
 </view>
