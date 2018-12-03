@@ -1,3 +1,4 @@
+const TextEncoder = require('text-encoding/index').TextEncoder
 const LAST_CONNECTED_DEVICE = 'last_connected_device'
 
 function inArray(arr, key, val) {
@@ -210,7 +211,8 @@ Page({
     str = str.concat('\x1b\x40')
       .concat(this._input)
       .concat('\x0a');
-    let buffer = str2ab(str);
+    // let buffer = str2ab(str);
+    let buffer = new TextEncoder("gb2312", { NONSTANDARD_allowLegacyEncoding: true }).encode(str).buffer
     console.log('ArrayBuffer', ab2hex(buffer));
 
     wx.writeBLECharacteristicValue({
