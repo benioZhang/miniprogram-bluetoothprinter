@@ -38,9 +38,6 @@
         <view>特性值: {{item.value}}</view>
       </view>
     </view>
-    <view class="input-area" wx:if="{{canWrite}}">
-      <input class="input" bindblur="bindblur" placeholder="输入打印内容"></input>
-    </view>
     <view class="btn-area">
       <button wx:if="{{canWrite}}" type="primary" bindtap="writeBLECharacteristicValue" style="margin-bottom: 10px;">
         写数据

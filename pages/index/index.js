@@ -1,5 +1,6 @@
 const TextEncoder = require('text-encoding/index').TextEncoder
 const LAST_CONNECTED_DEVICE = 'last_connected_device'
+const PrinterJobs = require('../../printer/printerjobs')
 
 function inArray(arr, key, val) {
   for (let i = 0; i < arr.length; i++) {
@@ -14,7 +15,7 @@ function inArray(arr, key, val) {
 function ab2hex(buffer) {
   const hexArr = Array.prototype.map.call(
     new Uint8Array(buffer),
-    function(bit) {
+    function (bit) {
       return ('00' + bit.toString(16)).slice(-2)
     }
   )
@@ -42,7 +43,6 @@ Page({
   },
   openBluetoothAdapter() {
     if (!wx.openBluetoothAdapter) {
-      // 如果希望用户在最新版本的客户端上体验您的小程序，可以这样子提示
       wx.showModal({
         title: '提示',
         content: '当前微信版本过低，无法使用该功能，请升级到最新微信版本后重试。'
@@ -61,7 +61,7 @@ Page({
             content: '未找到蓝牙设备, 请打开蓝牙后重试。',
             showCancel: false
           })
-          wx.onBluetoothAdapterStateChange(function(res) {
+          wx.onBluetoothAdapterStateChange((res) => {
             console.log('onBluetoothAdapterStateChange', res)
             if (res.available) {
               this.startBluetoothDevicesDiscovery()
@@ -168,6 +168,7 @@ Page({
     wx.getBLEDeviceServices({
       deviceId,
       success: (res) => {
+        console.log('getBLEDeviceServices', res)
         for (let i = 0; i < res.services.length; i++) {
           if (res.services[i].isPrimary) {
             this.getBLEDeviceCharacteristics(deviceId, res.services[i].uuid)
@@ -202,17 +203,38 @@ Page({
     })
   },
   writeBLECharacteristicValue() {
-    if (!this._input) {
-      return
-    }
-    console.log('params', this._deviceId, this._serviceId, this._characteristicId);
+    let printerJobs = new PrinterJobs();
+    printerJobs
+      .print('2018年12月5日17:34')
+      .print('--------------------------------')
+      .setAlign('ct')
+      .setSize(2, 2)
+      .print('#20饿了么外卖')
+      .setSize(1, 1)
+      .print('切尔西Chelsea')
+      .setSize(2, 2)
+      .print('在线支付(已支付)')
+      .setSize(1, 1)
+      .print('订单号：5415221202244734')
+      .print('下单时间：2017-07-07 18:08:08')
+      .setAlign('lt')
+      .print('------------一号口袋------------')
+      .print('意大利茄汁一面 * 1            15')
+      .print('--------------其他--------------')
+      .print('餐盒费：1')
+      .print('[赠送康师傅冰红茶] * 1')
+      .print('--------------------------------')
+      .setAlign('rt')
+      .print('原价：￥16')
+      .print('总价：￥16')
+      .setAlign('lt')
+      .print('--------------------------------')
+      .print('备注')
+      .println("无")
+      .print('--------------------------------')
+      .println();
 
-    var str = '';
-    str = str.concat('\x1b\x40')
-      .concat(this._input)
-      .concat('\x0a');
-    // let buffer = str2ab(str);
-    let buffer = new TextEncoder("gb2312", { NONSTANDARD_allowLegacyEncoding: true }).encode(str).buffer
+    let buffer = printerJobs.buffer();
     console.log('ArrayBuffer', ab2hex(buffer));
 
     wx.writeBLECharacteristicValue({
@@ -232,12 +254,7 @@ Page({
     wx.closeBluetoothAdapter()
     this._discoveryStarted = false
   },
-  bindblur(e) {
-    let value = e.detail.value;
-    console.log('printText', value)
-    this._input = value;
-  },
-  onLoad: function(options) {
+  onLoad(options) {
     const lastDevice = wx.getStorageSync(LAST_CONNECTED_DEVICE);
     this.setData({
       lastDevice: lastDevice
@@ -264,7 +281,7 @@ Page({
             content: '未找到蓝牙设备, 请打开蓝牙后重试。',
             showCancel: false
           })
-          wx.onBluetoothAdapterStateChange(function(res) {
+          wx.onBluetoothAdapterStateChange((res) => {
             console.log('onBluetoothAdapterStateChange', res)
             if (res.available) {
               this._createBLEConnection(deviceId, name)
