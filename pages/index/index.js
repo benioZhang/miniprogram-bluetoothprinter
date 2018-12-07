@@ -70,6 +70,13 @@ Page({
         }
       }
     })
+    wx.onBLEConnectionStateChange((res) => {
+      // 该方法回调中可以用于处理连接意外断开等异常情况
+      console.log('onBLEConnectionStateChange', `device ${res.deviceId} state has changed, connected: ${res.connected}`)
+      this.setData({
+        connected: res.connected
+      })
+    });
   },
   getBluetoothAdapterState() {
     wx.getBluetoothAdapterState({
@@ -101,6 +108,7 @@ Page({
   stopBluetoothDevicesDiscovery() {
     wx.stopBluetoothDevicesDiscovery({
       complete: () => {
+        console.log('stopBluetoothDevicesDiscovery')
         this._discoveryStarted = false
       }
     })
@@ -134,6 +142,7 @@ Page({
     wx.createBLEConnection({
       deviceId,
       success: () => {
+        console.log('createBLEConnection success');
         this.setData({
           connected: true,
           name,
@@ -235,8 +244,17 @@ Page({
       .println();
 
     let buffer = printerJobs.buffer();
-    console.log('ArrayBuffer', ab2hex(buffer));
-
+    console.log('ArrayBuffer', 'length: ' + buffer.byteLength, ' hex: ' + ab2hex(buffer));
+    // 1.并行调用多次会存在写失败的可能性 2.建议每次写入不超过20字节
+    // 分包处理，延时调用
+    const maxChunk = 20;
+    const delay = 20;
+    for (let i = 0, j = 0, length = buffer.byteLength; i < length; i += maxChunk, j++) {
+      let subPackage = buffer.slice(i, i + maxChunk <= length ? (i + maxChunk) : length);
+      setTimeout(this._writeBLECharacteristicValue, j * delay, subPackage);
+    }
+  },
+  _writeBLECharacteristicValue(buffer) {
     wx.writeBLECharacteristicValue({
       deviceId: this._deviceId,
       serviceId: this._serviceId,
