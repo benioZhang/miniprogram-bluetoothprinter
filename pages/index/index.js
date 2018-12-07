@@ -1,6 +1,6 @@
-const TextEncoder = require('text-encoding/index').TextEncoder
 const LAST_CONNECTED_DEVICE = 'last_connected_device'
 const PrinterJobs = require('../../printer/printerjobs')
+const printerUtil = require('../../printer/printerutil')
 
 function inArray(arr, key, val) {
   for (let i = 0; i < arr.length; i++) {
@@ -206,7 +206,7 @@ Page({
     let printerJobs = new PrinterJobs();
     printerJobs
       .print('2018年12月5日17:34')
-      .print('--------------------------------')
+      .print(printerUtil.fillLine())
       .setAlign('ct')
       .setSize(2, 2)
       .print('#20饿了么外卖')
@@ -218,20 +218,20 @@ Page({
       .print('订单号：5415221202244734')
       .print('下单时间：2017-07-07 18:08:08')
       .setAlign('lt')
-      .print('------------一号口袋------------')
-      .print('意大利茄汁一面 * 1            15')
-      .print('--------------其他--------------')
+      .print(printerUtil.fillAround('一号口袋'))
+      .print(printerUtil.inline('意大利茄汁一面 * 1', '15'))
+      .print(printerUtil.fillAround('其他'))
       .print('餐盒费：1')
       .print('[赠送康师傅冰红茶] * 1')
-      .print('--------------------------------')
+      .print(printerUtil.fillLine())
       .setAlign('rt')
       .print('原价：￥16')
       .print('总价：￥16')
       .setAlign('lt')
-      .print('--------------------------------')
+      .print(printerUtil.fillLine())
       .print('备注')
-      .println("无")
-      .print('--------------------------------')
+      .print("无")
+      .print(printerUtil.fillLine())
       .println();
 
     let buffer = printerJobs.buffer();
