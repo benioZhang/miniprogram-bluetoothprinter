@@ -55,6 +55,7 @@ Page({
         this.startBluetoothDevicesDiscovery()
       },
       fail: (res) => {
+        console.log('openBluetoothAdapter fail', res)
         if (res.errCode === 10001) {
           wx.showModal({
             title: '错误',
@@ -64,6 +65,10 @@ Page({
           wx.onBluetoothAdapterStateChange((res) => {
             console.log('onBluetoothAdapterStateChange', res)
             if (res.available) {
+              // 取消监听，否则stopBluetoothDevicesDiscovery后仍会继续触发onBluetoothAdapterStateChange，
+              // 导致再次调用startBluetoothDevicesDiscovery
+              wx.onBluetoothAdapterStateChange(() => {
+              });
               this.startBluetoothDevicesDiscovery()
             }
           })
@@ -76,6 +81,13 @@ Page({
       this.setData({
         connected: res.connected
       })
+      if (!res.connected) {
+        wx.showModal({
+          title: '错误',
+          content: '蓝牙连接已断开',
+          showCancel: false
+        })
+      }
     });
   },
   getBluetoothAdapterState() {
@@ -193,6 +205,8 @@ Page({
       serviceId,
       success: (res) => {
         console.log('getBLEDeviceCharacteristics success', res.characteristics)
+        // 这里会存在特征值是支持write，写入成功但是没有任何反应的情况
+        // 只能一个个去试
         for (let i = 0; i < res.characteristics.length; i++) {
           const item = res.characteristics[i]
           if (item.properties.write) {
@@ -245,7 +259,8 @@ Page({
 
     let buffer = printerJobs.buffer();
     console.log('ArrayBuffer', 'length: ' + buffer.byteLength, ' hex: ' + ab2hex(buffer));
-    // 1.并行调用多次会存在写失败的可能性 2.建议每次写入不超过20字节
+    // 1.并行调用多次会存在写失败的可能性
+    // 2.建议每次写入不超过20字节
     // 分包处理，延时调用
     const maxChunk = 20;
     const delay = 20;
@@ -279,6 +294,7 @@ Page({
     })
   },
   createBLEConnectionWithDeviceId(e) {
+    // 小程序在之前已有搜索过某个蓝牙设备，并成功建立连接，可直接传入之前搜索获取的 deviceId 直接尝试连接该设备
     const device = this.data.lastDevice
     if (!device) {
       return
@@ -293,6 +309,7 @@ Page({
         this._createBLEConnection(deviceId, name)
       },
       fail: (res) => {
+        console.log('openBluetoothAdapter fail', res)
         if (res.errCode === 10001) {
           wx.showModal({
             title: '错误',
@@ -302,6 +319,9 @@ Page({
           wx.onBluetoothAdapterStateChange((res) => {
             console.log('onBluetoothAdapterStateChange', res)
             if (res.available) {
+              // 取消监听
+              wx.onBluetoothAdapterStateChange(() => {
+              });
               this._createBLEConnection(deviceId, name)
             }
           })
