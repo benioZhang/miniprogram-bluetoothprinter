@@ -61,7 +61,7 @@ let buffer = bufferView.buffer;
 **7.打印出来的中文乱码?**  
 使用[text-encoding](https://github.com/inexorabletash/text-encoding)中文进行编码。
 
-###TODO OR NOT TODO？
+### TODO？
 * 打印图片
 * 打印二维码
 * 打印条码
