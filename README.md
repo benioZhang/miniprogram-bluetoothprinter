@@ -6,7 +6,7 @@
 
 ### 效果图
 <div>
-    <img src="img/screen1.png" width="400"><img src="img/screen2.png" width="400">
+    <img src="img/screen1.PNG" width="400"><img src="img/screen2.PNG" width="400">
 </div>
 
 ### 流程
